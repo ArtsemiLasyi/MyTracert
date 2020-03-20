@@ -64,6 +64,7 @@ namespace CSaS2
             {
                 CheckedSum += Convert.ToUInt32(BitConverter.ToUInt16(data, i));
             }
+            CheckedSum = (CheckedSum >> 16) + (CheckedSum & 0xFFFF);
             CheckedSum += (CheckedSum >> 16);     //дополняем сумму
             return (ushort)(~CheckedSum);
         }

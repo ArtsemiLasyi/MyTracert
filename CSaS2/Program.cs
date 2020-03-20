@@ -26,14 +26,19 @@ namespace CSaS2
                 string address = Console.ReadLine();
                 if ((isHost(address)) || (isIP(address)))
                 {
+                    IPAddress temp;
                     if(isHost(address))
                     {
                         IPAddress[] ipaddress = Dns.GetHostAddresses(address);
-                        address = ipaddress[0].ToString();
+                        temp = ipaddress[0];
+                    }
+                    else
+                    {
+                        temp = IPAddress.Parse(address);
                     }
 
                     Socket socket = new Socket(AddressFamily.InterNetwork,SocketType.Raw, ProtocolType.Icmp);
-                    IPEndPoint ipPoint = new IPEndPoint(IPAddress.Parse(address), 0);
+                    IPEndPoint ipPoint = new IPEndPoint(temp, 0);
                     byte[] data = Encoding.ASCII.GetBytes("Just a message");
                     ICMPPacket packet = new ICMPPacket(REQUEST_TYPE, 0, data);
                     Trace(socket, packet, ipPoint);
