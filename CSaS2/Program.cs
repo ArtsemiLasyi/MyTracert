@@ -16,7 +16,7 @@ namespace CSaS2
         const byte REQUEST_TYPE = 8;        //8 тип - эхо-запрос
         const byte RESPONSE_TYPE = 0;       //0 тип - эхо-ответ
         const byte EXPAND_TTL_TYPE = 11;    //11 тип - время жизни пакета истекло
-        const int TIMEOUT = 5000;           //время ожидания
+        const int TIMEOUT = 1000;           //время ожидания в милисекундах
 
         static void Main(string[] args)
         {
@@ -26,16 +26,7 @@ namespace CSaS2
                 string address = Console.ReadLine();
                 if ((isHost(address)) || (isIP(address)))
                 {
-                    IPAddress temp;
-                    if(isHost(address))
-                    {
-                        IPAddress[] ipaddress = Dns.GetHostAddresses(address);
-                        temp = ipaddress[0];
-                    }
-                    else
-                    {
-                        temp = IPAddress.Parse(address);
-                    }
+                    IPAddress temp = getIP(address);
 
                     Socket socket = new Socket(AddressFamily.InterNetwork,SocketType.Raw, ProtocolType.Icmp);
                     IPEndPoint ipPoint = new IPEndPoint(temp, 0);
@@ -50,6 +41,7 @@ namespace CSaS2
             }
         }
 
+        //Трассировка пути ICMP пакета
         static void Trace(Socket _socket, ICMPPacket _packet, IPEndPoint _ipPoint)
         {
             _socket.Connect(_ipPoint);
@@ -61,15 +53,24 @@ namespace CSaS2
                 for(byte j = 1; j <= PACKETS_NUM; j++)
                 {
                     int eCount = 0;
+                    int eTime = 0;
+                    IPEndPoint tempPoint = _ipPoint;
                     try
                     {
-                        byte type = sendAndReceive(_socket, _packet, _ipPoint, i, j);
-                        if ((type == RESPONSE_TYPE) && (j == PACKETS_NUM))
+                        _socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, i);
+                        byte type = sendAndReceive(_socket, _packet, ref tempPoint, ref eTime);
+                        Console.Write(" " + eTime.ToString() + "ms ");
+
+                        if (j == PACKETS_NUM)
                         {
-                            Console.WriteLine();
-                            Console.WriteLine("TRACING WAS FINISHED SUCCESSFULLY!");
-                            Console.WriteLine();
-                            return;
+                            Console.WriteLine(tempPoint.ToString());
+                            if (type == RESPONSE_TYPE)
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine("TRACING WAS FINISHED SUCCESSFULLY!");
+                                Console.WriteLine();
+                                return;
+                            }
                         }
                     }
                     catch (SocketException)
@@ -90,32 +91,22 @@ namespace CSaS2
         }
 
 
-        static byte sendAndReceive(Socket _socket, ICMPPacket _packet, IPEndPoint _ipPoint, int _ttl, int _num)
+        static byte sendAndReceive(Socket _socket, ICMPPacket _packet,ref IPEndPoint _ipPoint, ref int eTime)
         {
             int sTime;
             int fTime;
-            int eTime;
 
-            _socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, _ttl);
             sTime = Environment.TickCount;
 
             _socket.SendTo(_packet.Packet, _packet.PacketSize, SocketFlags.None, _ipPoint);
             EndPoint tempPoint = _ipPoint;
             byte[] rPacket = new byte[106];
             int rSize = _socket.ReceiveFrom(rPacket, ref tempPoint);
-
             fTime = Environment.TickCount;
             ICMPPacket response = new ICMPPacket(rPacket, rSize);
+            _ipPoint = (IPEndPoint)tempPoint;
             if ((response.Type == RESPONSE_TYPE) || (response.Type == EXPAND_TTL_TYPE))
-            {
                 eTime = fTime - sTime;
-                Console.Write(" " + eTime.ToString() + "ms ");
-
-                if (_num == PACKETS_NUM)
-                {
-                    Console.WriteLine(tempPoint.ToString());
-                }
-            }
             return response.Type;
         }
 
@@ -140,6 +131,18 @@ namespace CSaS2
                 return true;
             else
                 return false;
+        }
+
+        static IPAddress getIP(string address)
+        {
+            IPAddress temp;
+            if (isHost(address))
+            {
+                IPAddress[] ipaddress = Dns.GetHostAddresses(address);
+                return ipaddress[0];
+            }
+            else
+                return IPAddress.Parse(address);
         }
     }
 }
