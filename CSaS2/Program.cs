@@ -90,7 +90,7 @@ namespace CSaS2
             _socket.Close();
         }
 
-
+        //Отправка пакета и получение ответа
         static byte sendAndReceive(Socket _socket, ICMPPacket _packet,ref IPEndPoint _ipPoint, ref int eTime)
         {
             int sTime;
@@ -100,7 +100,7 @@ namespace CSaS2
 
             _socket.SendTo(_packet.Packet, _packet.PacketSize, SocketFlags.None, _ipPoint);
             EndPoint tempPoint = _ipPoint;
-            byte[] rPacket = new byte[106];
+            byte[] rPacket = new byte[1024];
             int rSize = _socket.ReceiveFrom(rPacket, ref tempPoint);
             fTime = Environment.TickCount;
             ICMPPacket response = new ICMPPacket(rPacket, rSize);
@@ -110,6 +110,7 @@ namespace CSaS2
             return response.Type;
         }
 
+        //Проверка на то, является ли строка хостом
         static bool isHost(string test)
         {
             string ValidHostnameRegex = @"^[a-zA-Z0-9]*\.[a-z]*$";
@@ -122,6 +123,7 @@ namespace CSaS2
  
         }
 
+        //Проверка на то, является ли строка IP-адресом
         static bool isIP(string test)
         {
             string ValidIpAddressRegex = @"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}";
@@ -133,6 +135,7 @@ namespace CSaS2
                 return false;
         }
 
+        //Получить IP-адрес
         static IPAddress getIP(string address)
         {
             IPAddress temp;

@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace CSaS2
 {
-    //реализация ICMP-пакета
+    //Реализация ICMP-пакета
     public class ICMPPacket
     {
         const int hIP = 20;
         const int hICMP = 4;
 
-        private byte[] mes = new byte[106];
+        private byte[] mes;
         private int mSize;
         private ushort checkedsum = 0;
 
@@ -32,18 +32,19 @@ namespace CSaS2
             }
         }
 
-        //на передачу
+        //На передачу
         public ICMPPacket(byte _type, byte _code, byte[] _data)
         {
             Type = _type;
             Code = _code;
-            Buffer.BlockCopy(_data, 0, mes, hICMP, _data.Length);
+            mes = new byte[_data.Length+4];
+            Buffer.BlockCopy(_data, 0, mes, 4, _data.Length);
             mSize = _data.Length + 4;               // идентификатор и номер последовательности - по 2 байта
             PacketSize = mSize + hICMP;
             checkedsum = getCheckedSum();
         }
 
-        //на приём
+        //На приём
         public ICMPPacket(byte[] data, int size)
         {
             Type = data[hIP];   
@@ -51,10 +52,12 @@ namespace CSaS2
             checkedsum = BitConverter.ToUInt16(data, hIP + 2);
             PacketSize = size - hIP;
             mSize = size - (hIP + hICMP);
+            mes = new byte[mSize];
             Buffer.BlockCopy(data, hIP + hICMP, mes, 0, mSize);
         }
 
 
+        //Подсчет контрольной суммы
         private ushort getCheckedSum()
         {
             UInt32 CheckedSum = 0;
